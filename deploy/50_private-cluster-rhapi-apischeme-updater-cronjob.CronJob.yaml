@@ -1,0 +1,32 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: private-cluster-rhapi-apischeme-updater-cronjob
+  namespace: openshift-private-cluster-rhapi-apischeme-updater
+  annotations:
+    description: private-cluster-rhapi-apischeme-updater-cronjob
+  labels:
+    app: private-cluster-rhapi-apischeme-updater
+spec:
+  failedJobsHistoryLimit: 5
+  successfulJobsHistoryLimit: 3
+  concurrencyPolicy: Replace
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: private-cluster-rhapi-apischeme-updater
+          restartPolicy: Never
+          containers:
+          - name: private-cluster-rhapi-apischeme-updater
+            image: "${REGISTRY_IMG}:${IMAGE_TAG}"
+            imagePullPolicy: Always
+            env:
+              - name: ALLOWED_CIDR_BLOCKS
+                valueFrom:
+                  configMapKeyRef:
+                    name: bastion-host-ips
+                    key: ALLOWED_CIDR_BLOCKS
+
+            

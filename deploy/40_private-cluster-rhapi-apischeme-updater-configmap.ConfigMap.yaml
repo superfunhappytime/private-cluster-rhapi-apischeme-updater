@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bastion-host-ips 
+  namespace: openshift-private-cluster-rhapi-apischeme-updater
+data:
+    ALLOWED_CIDR_BLOCKS: "${{ALLOWED_CIDR_BLOCKS}}"
