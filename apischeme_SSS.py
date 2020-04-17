@@ -51,7 +51,7 @@ apiVersion: hive.openshift.io/v1
 kind: SelectorSyncSet
 metadata:
  labels:
-   managed.openshift.io/osd: 'true'
+   managed.openshift.io/osd: "true"
  name: "filled-in-later"
 spec:
  clusterDeploymentSelector:
