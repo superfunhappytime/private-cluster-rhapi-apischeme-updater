@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: Template
+parameters:
+- name: ALLOWED_CIDR_BLOCKS
+  required: true
+- name: REGISTRY_IMG
+  required: true
+- name: IMAGE_TAG
+  required: true
+- name: REPO_NAME
+  value: private-cluster-rhapi-apischeme-updater
+  required: true
+metadata:
+  name: private-cluster-rhapi-apischeme-updater-template
+objects:
+- apiVersion: v1
+  kind: Template
+  parameters:
+  - name: ALLOWED_CIDR_BLOCKS
+    required: true
+  - name: REGISTRY_IMG
+    required: true
+  - name: IMAGE_TAG
+    required: true
+  - name: REPO_NAME
+    value: private-cluster-rhapi-apischeme-updater
+    required: true
+  metadata:
+    name: private-cluster-rhapi-apischeme-updater
+  objects:
+  - kind: Namespace
+    apiVersion: v1
+    metadata:
+      name: openshift-private-cluster-rhapi-apischeme-updater
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      creationTimestamp: null
+      name: private-cluster-rhapi-apischeme-updater
+      namespace: openshift-private-cluster-rhapi-apischeme-updater
+    rules:
+    - apiGroups:
+      - ''
+      resources:
+      - nodes
+      verbs:
+      - get
+      - list
+    - apiGroups:
+      - batch
+      resources:
+      - cronjobs
+      - jobs
+      verbs:
+      - get
+      - list
+      - create
+      - patch
+      - update
+      - delete
+      - deletecollection
+    - apiGroups:
+      - apps
+      resources:
+      - deployments
+      - replicasets
+      verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+    - apiGroups:
+      - ''
+      resources:
+      - pods
+      verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+    - apiGroups:
+      - hive.openshift.io
+      resources:
+      - selectorsyncsets
+      verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - kind: ClusterRoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: private-cluster-rhapi-apischeme-updater
+    subjects:
+    - kind: ServiceAccount
+      name: private-cluster-rhapi-apischeme-updater
+      namespace: openshift-private-cluster-rhapi-apischeme-updater
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: private-cluster-rhapi-apischeme-updater
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: bastion-host-ips
+      namespace: openshift-private-cluster-rhapi-apischeme-updater
+    data:
+      ALLOWED_CIDR_BLOCKS: ${{ALLOWED_CIDR_BLOCKS}}
+  - apiVersion: batch/v1beta1
+    kind: CronJob
+    metadata:
+      name: private-cluster-rhapi-apischeme-updater-cronjob
+      namespace: openshift-private-cluster-rhapi-apischeme-updater
+      annotations:
+        description: private-cluster-rhapi-apischeme-updater-cronjob
+      labels:
+        app: private-cluster-rhapi-apischeme-updater
+    spec:
+      failedJobsHistoryLimit: 5
+      successfulJobsHistoryLimit: 3
+      concurrencyPolicy: Replace
+      schedule: 0 * * * *
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              serviceAccountName: private-cluster-rhapi-apischeme-updater
+              restartPolicy: Never
+              containers:
+              - name: private-cluster-rhapi-apischeme-updater
+                image: ${REGISTRY_IMG}:${IMAGE_TAG}
+                imagePullPolicy: Always
+                env:
+                - name: ALLOWED_CIDR_BLOCKS
+                  valueFrom:
+                    configMapKeyRef:
+                      name: bastion-host-ips
+                      key: ALLOWED_CIDR_BLOCKS
