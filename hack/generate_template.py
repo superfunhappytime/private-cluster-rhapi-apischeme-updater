@@ -3,28 +3,31 @@
 import oyaml as yaml
 
 import os
-import sys
 import argparse
 import copy
 
+
 def get_yaml_all(filename):
-    with open(filename,'r') as input_file:
+    with open(filename, 'r') as input_file:
         return list(yaml.load_all(input_file))
 
+
 def get_yaml(filename):
-    with open(filename,'r') as input_file:
+    with open(filename, 'r') as input_file:
         return yaml.safe_load(input_file)
+
 
 def get_all_yaml_files(path):
     file_paths = []
-    for r,d,f in os.walk(path):
+    for r, d, f in os.walk(path):
         for file in f:
             if file.endswith('.yml') or file.endswith('.yaml'):
-                file_paths.append(os.path.join(r,file))
+                file_paths.append(os.path.join(r, file))
         # break, so we don't recurse
         break
     file_paths = sorted(file_paths)
     return file_paths
+
 
 def get_all_yaml_obj(file_paths):
     yaml_objs = []
@@ -33,6 +36,7 @@ def get_all_yaml_obj(file_paths):
         for obj in objects:
             yaml_objs.append(obj)
     return yaml_objs
+
 
 def process_yamls(name, directory, obj):
     o = copy.deepcopy(obj)
@@ -93,7 +97,7 @@ def process_yamls(name, directory, obj):
 
 
 if __name__ == '__main__':
-    #Argument parser
+    # Argument parser
     parser = argparse.ArgumentParser(description="template generation tool", usage='%(prog)s [options]')
     parser.add_argument("--template-dir", "-t", required=True, help="Path to template directory [required]")
     parser.add_argument("--yaml-directory", "-y", required=True, help="Path to folder containing yaml files [required]")
@@ -103,7 +107,6 @@ if __name__ == '__main__':
 
     # Get the template data
     template_data = get_yaml(os.path.join(arguments.template_dir, "updater-template.yaml"))
-
 
     # The templates and script are shared across repos (copy & paste).
     # Set the REPO_NAME parameter.
@@ -115,9 +118,9 @@ if __name__ == '__main__':
     for (dirpath, dirnames, filenames) in os.walk(arguments.yaml_directory):
         # skip 'crds' directory, these are bundled in the CSV
         if filenames:
-            object_name = dirpath.replace('/','-').replace(arguments.yaml_directory,arguments.repo_name)
+            object_name = dirpath.replace('/', '-').replace(arguments.yaml_directory, arguments.repo_name)
             process_yamls(object_name, dirpath, template_data)
 
     # write template file ordering by keys
-    with open(arguments.destination,'w') as outfile:
+    with open(arguments.destination, 'w') as outfile:
         yaml.dump(template_data, outfile)
