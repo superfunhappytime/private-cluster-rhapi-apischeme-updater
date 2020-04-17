@@ -65,22 +65,6 @@ def process_yamls(name, directory, obj):
                 if y['roleRef']['kind'] == "Role" and s['kind'] == 'ServiceAccount' and y['metadata']['namespace'] == s['namespace']:
                     sa_role_names.append(y['roleRef']['name'])
 
-    for y in yamls:
-        # for an operator skip deployments, SA, and all RBAC related to the SA (unless we didn't create the ClusterRole)
-        if y['kind'] in ('Deployment', 'ServiceAccount'):
-            continue
-        if y['kind'] == 'Role' and y['metadata']['name'] in sa_role_names:
-            continue
-        if y['kind'] == 'ClusterRoleBinding' or y['kind'] == 'RoleBinding':
-            skip = False
-            for s in y['subjects']:
-                # if it's for our SA don't process it (is part of CSV)
-                if s['name'] == sa_name and "dedicated-admin" in y['roleRef']['name']:
-                    skip = True
-                    break
-            if skip:
-                continue
-
         # it's something we want to have in the template
         if 'patch' in y:
             if not 'patches' in o['spec']:
@@ -93,7 +77,9 @@ def process_yamls(name, directory, obj):
 
     o['metadata']['name'] = name
     # append object to the template's objects
-    template_data['objects'].append(o)
+    for obj in o['objects']:
+        if obj['kind'] != 'Template':
+            template_data['objects'].append(obj)
 
 
 if __name__ == '__main__':
