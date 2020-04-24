@@ -45,13 +45,6 @@ def process_yamls(name, directory, obj):
     if len(yamls) == 0:
         return
 
-    # Find SA name.  It will be used for processing.
-    sa_name = ""
-    for y in yamls:
-        if y['kind'] == 'ServiceAccount':
-            sa_name = y['metadata']['name']
-            break
-
     # Find all Roles bound to the SA where the subject is in the same NS as the SA.
     # These Roles are managed by CSV only.
     sa_role_names = []
