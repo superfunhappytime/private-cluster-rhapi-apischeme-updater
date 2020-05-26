@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: private-cluster-rhapi-apischeme-updater-cronjob
-  namespace: openshift-private-cluster-rhapi-apischeme-updater
+  namespace: private-cluster-rhapi-apischeme-updater
   annotations:
     description: private-cluster-rhapi-apischeme-updater-cronjob
   labels:
