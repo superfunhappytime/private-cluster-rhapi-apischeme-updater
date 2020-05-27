@@ -13,27 +13,20 @@ parameters:
 metadata:
   name: private-cluster-rhapi-apischeme-updater-template
 objects:
-- kind: Namespace
-  apiVersion: v1
-  metadata:
-    name: private-cluster-rhapi-apischeme-updater
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
     name: private-cluster-rhapi-apischeme-updater
-    namespace: private-cluster-rhapi-apischeme-updater
 - apiVersion: v1
   kind: ConfigMap
   metadata:
     name: bastion-host-ips
-    namespace: private-cluster-rhapi-apischeme-updater
   data:
     ALLOWED_CIDR_BLOCKS: ${{ALLOWED_CIDR_BLOCKS}}
 - apiVersion: batch/v1beta1
   kind: CronJob
   metadata:
     name: private-cluster-rhapi-apischeme-updater-cronjob
-    namespace: private-cluster-rhapi-apischeme-updater
     annotations:
       description: private-cluster-rhapi-apischeme-updater-cronjob
     labels:
