@@ -2,7 +2,6 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: private-cluster-rhapi-apischeme-updater-cronjob
-  namespace: private-cluster-rhapi-apischeme-updater
   annotations:
     description: private-cluster-rhapi-apischeme-updater-cronjob
   labels:
