@@ -66,10 +66,10 @@ spec:
      name: rh-api
      namespace: openshift-cloud-ingress-operator
    spec:
-   managementAPIServerIngress:
-     enabled: true
-     dnsName: rh-api
-     allowedCIDRBlocks: []
+     managementAPIServerIngress:
+       enabled: true
+       dnsName: rh-api
+       allowedCIDRBlocks: []
 """
 
 api_yaml = yaml.safe_load(apischeme_sss)
