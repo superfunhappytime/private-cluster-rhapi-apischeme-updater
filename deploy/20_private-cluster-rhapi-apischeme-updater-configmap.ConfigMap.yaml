@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: bastion-host-ips 
-data:
-    ALLOWED_CIDR_BLOCKS: "${{ALLOWED_CIDR_BLOCKS}}"
