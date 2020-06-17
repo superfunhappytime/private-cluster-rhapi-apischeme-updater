@@ -50,26 +50,26 @@ apischeme_sss = """
 apiVersion: hive.openshift.io/v1
 kind: SelectorSyncSet
 metadata:
- labels:
-   managed.openshift.io/osd: "true"
- name: "filled-in-later"
+  labels:
+    managed.openshift.io/osd: "true"
+  name: "filled-in-later"
 spec:
- clusterDeploymentSelector:
-   matchLabels:
-     api.openshift.com/managed: "true"
-     hive.openshift.io/cluster-platform: "aws"
- resourceApplyMode: Sync
- resources:
- - kind: APIScheme
-   apiVersion: cloudingress.managed.openshift.io/v1alpha1
-   metadata:
-     name: rh-api
-     namespace: openshift-cloud-ingress-operator
-   spec:
-     managementAPIServerIngress:
-       enabled: true
-       dnsName: rh-api
-       allowedCIDRBlocks: []
+  clusterDeploymentSelector:
+    matchLabels:
+      api.openshift.com/managed: "true"
+      hive.openshift.io/cluster-platform: "aws"
+  resourceApplyMode: Sync
+  resources:
+  - kind: APIScheme
+    apiVersion: cloudingress.managed.openshift.io/v1alpha1
+    metadata:
+      name: rh-api
+      namespace: openshift-cloud-ingress-operator
+    spec:
+      managementAPIServerIngress:
+        enabled: true
+        dnsName: rh-api
+        allowedCIDRBlocks: []
 """
 
 api_yaml = yaml.safe_load(apischeme_sss)
@@ -80,7 +80,7 @@ all_ips = get_hive_ips() + get_bastion_ips()
 ips_len = len(all_ips)
 
 for i in range(ips_len):
-    api_yaml['spec']['resources'][0]['managementAPIServerIngress']['allowedCIDRBlocks'].append(all_ips[i])
+    api_yaml['spec']['resources'][0]['spec']['managementAPIServerIngress']['allowedCIDRBlocks'].append(all_ips[i])
 
 sss_resources = dyn_client.resources.get(api_version='hive.openshift.io/v1', kind='SelectorSyncSet')
 dyn_client.apply(sss_resources, body=api_yaml)
