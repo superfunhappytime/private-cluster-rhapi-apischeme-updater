@@ -3,7 +3,7 @@
 import sys
 import yaml
 import os
-
+import json
 
 from kubernetes import config
 from kubernetes.client import ApiClient
@@ -21,8 +21,15 @@ k8s_client = ApiClient(config.load_incluster_config())
 dyn_client = DynamicClient(k8s_client)
 
 
+def get_sss():
+    selectorsyncsets = dyn_client.resources.get(
+        api_version="hive.openshift.io/v1", kind="SelectorSyncSet"
+    )
+    return selectorsyncsets.get(name=APISCHEME_SSS_NAME)
+
+
 def get_hive_ips():
-    nodes = dyn_client.resources.get(api_version='v1', kind='Node')
+    nodes = dyn_client.resources.get(api_version="v1", kind="Node")
 
     hive_ips = []
     for node in nodes.get().items:
@@ -31,56 +38,43 @@ def get_hive_ips():
                 # add /32 to the end since they're not recorded as CIDR blocks
                 hive_ips.append("{}/32".format(a.address))
 
-    if len(hive_ips) == 0:
-        print("not enough hive ips")
-        sys.exit(1)
+    print("found %d hive IPs" % len(hive_ips))
+
     return hive_ips
 
 
-def get_bastion_ips():
-    bastion_ip_str = os.getenv("ALLOWED_CIDR_BLOCKS", [])
-    bastion_ips = bastion_ip_str.split(",")
-    if len(bastion_ips) == 0:
-        print("not enough bastion ips")
-        sys.exit(1)
+def get_bastion_ips(sss):
+    bastion_ips = sss.metadata.annotations.allowedCIDRBlocks or ""
+
+    bastion_ips = json.loads(bastion_ips)
+    print("found %d bastion IPs" % len(bastion_ips))
+
     return bastion_ips
 
 
-apischeme_sss = """
-apiVersion: hive.openshift.io/v1
-kind: SelectorSyncSet
-metadata:
-  labels:
-    managed.openshift.io/osd: "true"
-  name: "filled-in-later"
-spec:
-  clusterDeploymentSelector:
-    matchLabels:
-      api.openshift.com/managed: "true"
-      hive.openshift.io/cluster-platform: "aws"
-  resourceApplyMode: Sync
-  resources:
-  - kind: APIScheme
-    apiVersion: cloudingress.managed.openshift.io/v1alpha1
-    metadata:
-      name: rh-api
-      namespace: openshift-cloud-ingress-operator
-    spec:
-      managementAPIServerIngress:
-        enabled: true
-        dnsName: rh-api
-        allowedCIDRBlocks: []
-"""
+sss = get_sss()
 
-api_yaml = yaml.safe_load(apischeme_sss)
+all_ips = set(get_hive_ips() + get_bastion_ips(sss))
 
-api_yaml['metadata']['name'] = APISCHEME_SSS_NAME
+if not all_ips:
+    print("Not enough IPs!")
+    sys.exit(1)
 
-all_ips = get_hive_ips() + get_bastion_ips()
-ips_len = len(all_ips)
+ingress = sss.spec.resources[0].spec.managementAPIServerIngress
 
-for i in range(ips_len):
-    api_yaml['spec']['resources'][0]['spec']['managementAPIServerIngress']['allowedCIDRBlocks'].append(all_ips[i])
+if set(ingress.allowedCIDRBlocks) == all_ips:
+    print("Same IPs, no-op\n%s" % all_ips)
+    sys.exit(0)
 
-sss_resources = dyn_client.resources.get(api_version='hive.openshift.io/v1', kind='SelectorSyncSet')
-dyn_client.apply(sss_resources, body=api_yaml)
+# Blow away last config so it doesn't recurse
+setattr(
+    sss.metadata.annotations, "kubectl.kubernetes.io/last-applied-configuration", ""
+)
+
+# Overwrite the list of IPs
+ingress.allowedCIDRBlocks = list(all_ips)
+print("Applying IPs: %s" % ingress.allowedCIDRBlocks)
+sss_resources = dyn_client.resources.get(
+    api_version="hive.openshift.io/v1", kind="SelectorSyncSet"
+)
+dyn_client.apply(sss_resources, body=sss.to_dict())
