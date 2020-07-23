@@ -35,7 +35,7 @@ objects:
     failedJobsHistoryLimit: 5
     successfulJobsHistoryLimit: 3
     concurrencyPolicy: Replace
-    schedule: 0 * * * *
+    schedule: '*/5 * * * *'
     jobTemplate:
       spec:
         template:
