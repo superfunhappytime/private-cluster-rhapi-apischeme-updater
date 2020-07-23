@@ -5,12 +5,13 @@ import yaml
 import os
 import json
 
+
 from kubernetes import config
 from kubernetes.client import ApiClient
 
 from openshift.dynamic import DynamicClient
 
-APISCHEME_SSS_NAME = "cloud-ingress-operator-apischeme"
+APISCHEME_SSS_NAME = "cloud-ingress-operator"
 
 # from kubeconfig
 # k8s_client = config.new_client_from_config()
@@ -43,8 +44,8 @@ def get_hive_ips():
     return hive_ips
 
 
-def get_bastion_ips(sss):
-    bastion_ips = sss.metadata.annotations.allowedCIDRBlocks or ""
+def get_bastion_ips(resource):
+    bastion_ips = resource.metadata.annotations.allowedCIDRBlocks or ""
 
     bastion_ips = json.loads(bastion_ips)
     print("found %d bastion IPs" % len(bastion_ips))
@@ -54,22 +55,23 @@ def get_bastion_ips(sss):
 
 sss = get_sss()
 
-all_ips = set(get_hive_ips() + get_bastion_ips(sss))
+for resource in sss.spec.resources:
+    if resource.kind == "APIScheme" and resource.metadata.name == "rh-api":
+        break
+else:
+    print("Couldn't find the rh-api APIScheme!")
+    sys.exit(1)
 
+all_ips = set(get_hive_ips() + get_bastion_ips(resource))
 if not all_ips:
     print("Not enough IPs!")
     sys.exit(1)
 
-ingress = sss.spec.resources[0].spec.managementAPIServerIngress
+ingress = resource.spec.managementAPIServerIngress
 
 if set(ingress.allowedCIDRBlocks) == all_ips:
     print("Same IPs, no-op\n%s" % all_ips)
     sys.exit(0)
-
-# Blow away last config so it doesn't recurse
-setattr(
-    sss.metadata.annotations, "kubectl.kubernetes.io/last-applied-configuration", ""
-)
 
 # Overwrite the list of IPs
 ingress.allowedCIDRBlocks = list(all_ips)
