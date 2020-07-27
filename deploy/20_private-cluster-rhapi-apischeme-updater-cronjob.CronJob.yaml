@@ -20,12 +20,4 @@ spec:
           containers:
           - name: private-cluster-rhapi-apischeme-updater
             image: "${REGISTRY_IMG}:${IMAGE_TAG}"
-            imagePullPolicy: Always
-            env:
-              - name: ALLOWED_CIDR_BLOCKS
-                valueFrom:
-                  configMapKeyRef:
-                    name: bastion-host-ips
-                    key: ALLOWED_CIDR_BLOCKS
-
-            
+            imagePullPolicy: Always            
