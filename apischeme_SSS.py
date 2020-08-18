@@ -62,7 +62,14 @@ else:
     print("Couldn't find the rh-api APIScheme!")
     sys.exit(1)
 
-all_ips = set(get_hive_ips() + get_bastion_ips(resource))
+hive_ips = get_hive_ips()
+if not hive_ips:
+    print("Couldn't find any hive IPs! Assuming this means we're running "
+          "on v4, and not that there's an actual problem. Bailing with "
+          "'success' status.")
+    sys.exit(0)
+
+all_ips = set(hive_ips + get_bastion_ips(resource))
 if not all_ips:
     print("Not enough IPs!")
     sys.exit(1)
@@ -76,6 +83,12 @@ if set(ingress.allowedCIDRBlocks) == all_ips:
 # Overwrite the list of IPs
 ingress.allowedCIDRBlocks = list(all_ips)
 print("Applying IPs: %s" % ingress.allowedCIDRBlocks)
+
+# Tell cloud-ingress-operator it's okay to apply the CIDRs now.
+if not ingress.enabled:
+    print("Enabling ingress")
+    ingress.enabled = True  # As opposed to the string "true".
+
 sss_resources = dyn_client.resources.get(
     api_version="hive.openshift.io/v1", kind="SelectorSyncSet"
 )
