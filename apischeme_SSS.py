@@ -8,6 +8,7 @@ import json
 
 from kubernetes import config
 from kubernetes.client import ApiClient
+from boto3 import Session
 
 from openshift.dynamic import DynamicClient
 
@@ -53,6 +54,29 @@ def get_bastion_ips(resource):
     return bastion_ips
 
 
+def add_missing_ips(missing_ips):
+    """ Submit a request to add the missing entries to app-interface """
+    aws_access_key_id = os.environ['aws_access_key_id']
+    aws_secret_access_key = os.environ['aws_secret_access_key']
+    aws_region = os.environ['aws_region']
+    queue_url = os.environ['queue_url']
+
+    session = Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=aws_region,
+    )
+    sqs = session.client('sqs')
+    body = {
+        'pr_type': 'create_cloud_ingress_operator_cidr_blocks_mr',
+        'cidr_blocks': missing_ips
+    }
+    sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=json.dumps(body)
+    )
+
+
 sss = get_sss()
 
 for resource in sss.spec.resources:
@@ -76,20 +100,10 @@ if not all_ips:
 
 ingress = resource.spec.managementAPIServerIngress
 
-if set(ingress.allowedCIDRBlocks) == all_ips:
+ingress_ips = set(ingress.allowedCIDRBlocks)
+if ingress_ips == all_ips:
     print("Same IPs, no-op\n%s" % all_ips)
     sys.exit(0)
 
-# Overwrite the list of IPs
-ingress.allowedCIDRBlocks = list(all_ips)
-print("Applying IPs: %s" % ingress.allowedCIDRBlocks)
-
-# Tell cloud-ingress-operator it's okay to apply the CIDRs now.
-if not ingress.enabled:
-    print("Enabling ingress")
-    ingress.enabled = True  # As opposed to the string "true".
-
-sss_resources = dyn_client.resources.get(
-    api_version="hive.openshift.io/v1", kind="SelectorSyncSet"
-)
-dyn_client.apply(sss_resources, body=sss.to_dict())
+missing_ips = [ip for ip in all_ips if ip not in ingress_ips]
+add_missing_ips(missing_ips)
