@@ -69,7 +69,7 @@ def add_missing_ips(missing_ips):
     sqs = session.client('sqs')
     body = {
         'pr_type': 'create_cloud_ingress_operator_cidr_blocks_mr',
-        'cidr_blocks': missing_ips
+        'cidr_blocks': list(missing_ips)
     }
     sqs.send_message(
         QueueUrl=queue_url,
@@ -101,9 +101,9 @@ if not all_ips:
 ingress = resource.spec.managementAPIServerIngress
 
 ingress_ips = set(ingress.allowedCIDRBlocks)
-if ingress_ips == all_ips:
-    print("Same IPs, no-op\n%s" % all_ips)
+missing_ips = all_ips - ingress_ips
+if not missing_ips:
+    print("No IPs to add, no-op")
     sys.exit(0)
 
-missing_ips = [ip for ip in all_ips if ip not in ingress_ips]
 add_missing_ips(missing_ips)
