@@ -4,7 +4,6 @@ LABEL maintainer "Red Hat OpenShift Dedicated SRE Team"
 RUN microdnf install -y python3 python3-pip
 RUN pip3 install openshift
 RUN pip3 install kubernetes
-RUN pip3 install boto3
 
 RUN mkdir /app
 WORKDIR /app

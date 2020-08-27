@@ -8,7 +8,6 @@ import json
 
 from kubernetes import config
 from kubernetes.client import ApiClient
-from boto3 import Session
 
 from openshift.dynamic import DynamicClient
 
@@ -54,45 +53,6 @@ def get_bastion_ips(resource):
     return bastion_ips
 
 
-def _manage_ips(ips, operation):
-    """ Submit a request to add/remove entries to/from app-interface """
-    allowed_operations = ['add', 'remove']
-    if operation not in allowed_operations:
-        print("operation is not allowed")
-        sys.exit(1)
-
-    aws_access_key_id = os.environ['aws_access_key_id']
-    aws_secret_access_key = os.environ['aws_secret_access_key']
-    aws_region = os.environ['aws_region']
-    queue_url = os.environ['queue_url']
-
-    session = Session(
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name=aws_region,
-    )
-    sqs = session.client('sqs')
-    body = {
-        'pr_type': 'create_cloud_ingress_operator_cidr_blocks_mr',
-        'cidr_blocks': list(ips),
-        'operation': operation
-    }
-    sqs.send_message(
-        QueueUrl=queue_url,
-        MessageBody=json.dumps(body)
-    )
-
-
-def add_ips(ips):
-    """ Submit a request to add entries to app-interface """
-    _manage_ips(ips, operation='add')
-
-
-def remove_ips(ips):
-    """ Submit a request to remove entries from app-interface """
-    _manage_ips(ips, operation='remove')
-
-
 sss = get_sss()
 
 for resource in sss.spec.resources:
@@ -116,10 +76,20 @@ if not all_ips:
 
 ingress = resource.spec.managementAPIServerIngress
 
-ingress_ips = set(ingress.allowedCIDRBlocks)
-missing_ips = all_ips - ingress_ips
-if not missing_ips:
-    print("No IPs to add, no-op")
+if set(ingress.allowedCIDRBlocks) == all_ips:
+    print("Same IPs, no-op\n%s" % all_ips)
     sys.exit(0)
 
-add_ips(missing_ips)
+# Overwrite the list of IPs
+ingress.allowedCIDRBlocks = list(all_ips)
+print("Applying IPs: %s" % ingress.allowedCIDRBlocks)
+
+# Tell cloud-ingress-operator it's okay to apply the CIDRs now.
+if not ingress.enabled:
+    print("Enabling ingress")
+    ingress.enabled = True  # As opposed to the string "true".
+
+sss_resources = dyn_client.resources.get(
+    api_version="hive.openshift.io/v1", kind="SelectorSyncSet"
+)
+dyn_client.apply(sss_resources, body=sss.to_dict())

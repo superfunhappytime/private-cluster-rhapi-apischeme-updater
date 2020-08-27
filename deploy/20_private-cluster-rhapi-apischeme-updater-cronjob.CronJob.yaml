@@ -20,25 +20,4 @@ spec:
           containers:
           - name: private-cluster-rhapi-apischeme-updater
             image: "${REGISTRY_IMG}:${IMAGE_TAG}"
-            imagePullPolicy: Always
-            env:
-            - name: aws_access_key_id
-              valueFrom:
-                secretKeyRef:
-                  name: pr-gateway
-                  key: aws_access_key_id
-            - name: aws_secret_access_key
-              valueFrom:
-                secretKeyRef:
-                  name: pr-gateway
-                  key: aws_access_key_id
-            - name: aws_region
-              valueFrom:
-                secretKeyRef:
-                  name: pr-gateway
-                  key: aws_region
-            - name: queue_url
-              valueFrom:
-                secretKeyRef:
-                  name: pr-gateway
-                  key: gitlab_pr_submitter_queue_url
+            imagePullPolicy: Always            
