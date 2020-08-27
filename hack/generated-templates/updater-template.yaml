@@ -48,7 +48,7 @@ objects:
                 valueFrom:
                   secretKeyRef:
                     name: pr-gateway
-                    key: aws_secret_access_key
+                    key: aws_access_key_id
               - name: aws_region
                 valueFrom:
                   secretKeyRef:
